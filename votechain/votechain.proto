@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package votechain;
+
+service PollingStation {
+  rpc Cast(Vote) returns (Result) {}
+}
+
+service ChainNode {
+  rpc GetLatestBlock(Empty) returns (Block) {}
+  rpc GetBlock(BlockNumber) returns (Block) {}
+  rpc Coordinate(stream Block) returns (stream Block) {}
+}
+
+message Empty {}
+
+message Vote {
+  string voter_proof = 1;
+  int32 race_id = 2;
+  string selection = 3;
+}
+
+message Result {
+  bool success = 1;
+  string message = 2;
+}
+
+message Block {
+  int32 number = 1;
+  string parent = 2;
+  string nonce = 3;
+  int32 capacity = 4;
+  string votes = 5;
+}
+
+message BlockNumber {
+  int32 number = 1;
+}
