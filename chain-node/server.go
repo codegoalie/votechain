@@ -47,6 +47,13 @@ func (s chainNodeServer) Coordinate(client pb.ChainNode_CoordinateServer) error 
 
 func newServer() *chainNodeServer {
 	s := new(chainNodeServer)
+	s.chain = vchain.NewChain(3)
+	s.chain.AddVote(vchain.Vote{
+		VoterProof: "Dummy",
+		RaceID:     1,
+		Selection:  "2,3,1",
+	})
+
 	return s
 }
 
