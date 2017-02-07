@@ -24,7 +24,7 @@ func (c *Chain) AddVote(v Vote) error {
 		return err
 	}
 
-	if len(c.CurrentBlock.votes) >= c.blockCapacity {
+	if len(c.CurrentBlock.Votes) >= c.blockCapacity {
 		blockHash := c.CurrentBlock.Hash()
 		c.Blocks[blockHash] = c.CurrentBlock
 		c.CurrentBlock = Block{Number: c.CurrentBlock.Number + 1, Capacity: c.blockCapacity}

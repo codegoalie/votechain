@@ -14,7 +14,7 @@ type Block struct {
 	Nonce  int
 
 	Capacity int
-	votes    []Vote
+	Votes    []Vote
 }
 
 // Hash is the SHA256 checksum of the block
@@ -34,7 +34,7 @@ func (b *Block) Hash() string {
 
 // AddVote verifies and appends the vote to the block
 func (b *Block) AddVote(v Vote) error {
-	if len(b.votes) > b.Capacity {
+	if len(b.Votes) > b.Capacity {
 		return errors.New("Block full")
 	}
 
@@ -42,6 +42,6 @@ func (b *Block) AddVote(v Vote) error {
 		return err
 	}
 
-	b.votes = append(b.votes, v)
+	b.Votes = append(b.Votes, v)
 	return nil
 }

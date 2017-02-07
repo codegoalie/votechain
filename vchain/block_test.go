@@ -5,7 +5,7 @@ import "testing"
 func TestBlockHash(t *testing.T) {
 	block := Block{
 		Parent: "00000000000000000000000000000000000000000000000000",
-		votes: []Vote{
+		Votes: []Vote{
 			{
 				VoterProof: "something",
 				RaceID:     1,
@@ -25,7 +25,7 @@ func TestBlockHash(t *testing.T) {
 func TestBlockHashIsUnique(t *testing.T) {
 	block := Block{
 		Parent: "00000000000000000000000000000000000000000000000000",
-		votes: []Vote{
+		Votes: []Vote{
 			{
 				VoterProof: "something",
 				RaceID:     1,
@@ -35,7 +35,7 @@ func TestBlockHashIsUnique(t *testing.T) {
 	}
 	block2 := Block{
 		Parent: "00000000000000000000000000000000000000000000000000",
-		votes: []Vote{
+		Votes: []Vote{
 			{
 				VoterProof: "else",
 				RaceID:     1,
