@@ -4,12 +4,12 @@ package votechain;
 
 service PollingStation {
   rpc Cast(Vote) returns (Result) {}
+  rpc GetLatestBlock(Empty) returns (Block) {}
+  rpc GetBlock(BlockNumber) returns (Block) {}
+  rpc Coordinate(stream Coordination) returns (stream Coordination) {}
 }
 
 service ChainNode {
-  rpc GetLatestBlock(Empty) returns (Block) {}
-  rpc GetBlock(BlockNumber) returns (Block) {}
-  rpc Coordinate(stream Block) returns (stream Block) {}
 }
 
 message Empty {}
@@ -35,4 +35,11 @@ message Block {
 
 message BlockNumber {
   int32 number = 1;
+}
+
+message Coordination {
+  oneof transaction {
+    Block block = 1;
+    Vote vote = 2;
+  }
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -16,27 +17,56 @@ type pollingPlaceServer struct {
 	chain vchain.Chain
 }
 
-func (p *pollingPlaceServer) Cast(ctx context.Context, vote *pb.Vote) (*pb.Result, error) {
+func (s *pollingPlaceServer) Cast(ctx context.Context, vote *pb.Vote) (*pb.Result, error) {
 	log.Printf("Received cast: \n%+v", vote)
-	err := p.chain.AddVote(vchain.Vote{
+	err := s.chain.AddVote(vchain.Vote{
 		VoterProof: vote.VoterProof,
 		RaceID:     int(vote.RaceId),
 		Selection:  vote.Selection,
 	})
 
 	if err != nil {
-		log.Printf("Could not cast vote: \n%+v", p.chain)
+		log.Printf("Could not cast vote: \n%+v", s.chain)
 		return &pb.Result{
 			Success: false,
 			Message: "Could not cast vote",
 		}, err
 	}
 
-	log.Printf("Vote Cast! \n%+v", p.chain)
+	log.Printf("Vote Cast! \n%+v", s.chain)
 	return &pb.Result{
 		Success: true,
 		Message: "Vote cast! Thanks for being a part!",
 	}, nil
+}
+
+func (s pollingPlaceServer) GetLatestBlock(ctx context.Context, _ *pb.Empty) (*pb.Block, error) {
+	currentBlock := s.chain.CurrentBlock
+
+	votes := make([]*pb.Vote, len(currentBlock.Votes))
+	for _, vote := range currentBlock.Votes {
+		votes = append(votes, &pb.Vote{
+			VoterProof: vote.VoterProof,
+			RaceId:     int32(vote.RaceID),
+			Selection:  vote.Selection,
+		})
+	}
+
+	return &pb.Block{
+		Number:   int32(currentBlock.Number),
+		Parent:   currentBlock.Parent,
+		Nonce:    int32(currentBlock.Nonce),
+		Capacity: int32(currentBlock.Capacity),
+		Votes:    votes,
+	}, nil
+}
+
+func (s pollingPlaceServer) GetBlock(ctx context.Context, in *pb.BlockNumber) (*pb.Block, error) {
+	return &pb.Block{}, nil
+}
+
+func (s pollingPlaceServer) Coordinate(client pb.PollingStation_CoordinateServer) error {
+	return nil
 }
 
 func newServer() *pollingPlaceServer {
@@ -52,8 +82,11 @@ func newServer() *pollingPlaceServer {
 }
 
 func main() {
-	fmt.Println("Listening on :4000")
-	lis, err := net.Listen("tcp", fmt.Sprintf(":4000"))
+	port := flag.String("port", "4000", "Port to listen on")
+	flag.Parse()
+
+	fmt.Printf("Listening on :%s\n", *port)
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", *port))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
