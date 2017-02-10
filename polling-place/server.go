@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 
@@ -54,7 +55,40 @@ func (s pollingPlaceServer) GetBlock(ctx context.Context, in *pb.BlockNumber) (*
 }
 
 func (s pollingPlaceServer) Coordinate(client pb.PollingStation_CoordinateServer) error {
-	return nil
+	for {
+		in, err := client.Recv()
+		if err == io.EOF {
+			return nil
+
+		}
+		if err != nil {
+			return err
+
+		}
+
+		switch msg := in.Transaction.(type) {
+		case *pb.Coordination_Block:
+			block := msg.Block
+			if _, ok := s.chain.Blocks[block.Hash]; ok {
+				log.Printf("Coordinated block found: %s\n", block.Hash)
+			} else {
+				log.Printf("Coordinated block not found: %s\nNeed to figure out how to add this\n", block.Hash)
+			}
+		case *pb.Coordination_Vote:
+			vote := msg.Vote
+			log.Printf("Coordinated vote received: %+v\n", vote)
+		}
+		// key := serialize(in.Location)
+		//                 ... // look for notes to be sent to client
+		// 								for _, note := range s.routeNotes[key] {
+		// 									if err := stream.Send(note); err != nil {
+		// 														return err
+
+		// 									}
+
+		// 								}
+
+	}
 }
 
 func newServer() *pollingPlaceServer {

@@ -29,8 +29,9 @@ message Block {
   int32 number = 1;
   string parent = 2;
   int32 nonce = 3;
-  int32 capacity = 4;
-  repeated Vote votes = 5;
+  string hash = 4;
+  int32 capacity = 5;
+  repeated Vote votes = 6;
 }
 
 message BlockNumber {
