@@ -60,11 +60,6 @@ func (s pollingPlaceServer) Coordinate(client pb.PollingStation_CoordinateServer
 func newServer() *pollingPlaceServer {
 	s := new(pollingPlaceServer)
 	s.chain = vchain.NewChain(3)
-	s.chain.AddVote(vchain.Vote{
-		VoterProof: "Dummy",
-		RaceID:     1,
-		Selection:  "2,3,1",
-	})
 
 	return s
 }
