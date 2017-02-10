@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -62,7 +63,26 @@ func (s pollingPlaceServer) GetLatestBlock(ctx context.Context, _ *pb.Empty) (*p
 }
 
 func (s pollingPlaceServer) GetBlock(ctx context.Context, in *pb.BlockNumber) (*pb.Block, error) {
-	return &pb.Block{}, nil
+	if block, ok := s.chain.Blocks[in.Hash]; ok {
+		votes := make([]*pb.Vote, len(block.Votes))
+		for _, vote := range block.Votes {
+			votes = append(votes, &pb.Vote{
+				VoterProof: vote.VoterProof,
+				RaceId:     int32(vote.RaceID),
+				Selection:  vote.Selection,
+			})
+		}
+
+		return &pb.Block{
+			Number:   int32(block.Number),
+			Parent:   block.Parent,
+			Nonce:    int32(block.Nonce),
+			Capacity: int32(block.Capacity),
+			Votes:    votes,
+		}, nil
+	}
+
+	return nil, errors.New("Unknown block")
 }
 
 func (s pollingPlaceServer) Coordinate(client pb.PollingStation_CoordinateServer) error {

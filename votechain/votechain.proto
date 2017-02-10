@@ -34,7 +34,7 @@ message Block {
 }
 
 message BlockNumber {
-  int32 number = 1;
+  string hash = 1;
 }
 
 message Coordination {
