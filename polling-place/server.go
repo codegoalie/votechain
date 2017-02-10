@@ -42,44 +42,12 @@ func (s *pollingPlaceServer) Cast(ctx context.Context, vote *pb.Vote) (*pb.Resul
 }
 
 func (s pollingPlaceServer) GetLatestBlock(ctx context.Context, _ *pb.Empty) (*pb.Block, error) {
-	currentBlock := s.chain.CurrentBlock
-
-	votes := make([]*pb.Vote, len(currentBlock.Votes))
-	for _, vote := range currentBlock.Votes {
-		votes = append(votes, &pb.Vote{
-			VoterProof: vote.VoterProof,
-			RaceId:     int32(vote.RaceID),
-			Selection:  vote.Selection,
-		})
-	}
-
-	return &pb.Block{
-		Number:   int32(currentBlock.Number),
-		Parent:   currentBlock.Parent,
-		Nonce:    int32(currentBlock.Nonce),
-		Capacity: int32(currentBlock.Capacity),
-		Votes:    votes,
-	}, nil
+	return cast(s.chain.CurrentBlock), nil
 }
 
 func (s pollingPlaceServer) GetBlock(ctx context.Context, in *pb.BlockNumber) (*pb.Block, error) {
 	if block, ok := s.chain.Blocks[in.Hash]; ok {
-		votes := make([]*pb.Vote, len(block.Votes))
-		for _, vote := range block.Votes {
-			votes = append(votes, &pb.Vote{
-				VoterProof: vote.VoterProof,
-				RaceId:     int32(vote.RaceID),
-				Selection:  vote.Selection,
-			})
-		}
-
-		return &pb.Block{
-			Number:   int32(block.Number),
-			Parent:   block.Parent,
-			Nonce:    int32(block.Nonce),
-			Capacity: int32(block.Capacity),
-			Votes:    votes,
-		}, nil
+		return cast(block), nil
 	}
 
 	return nil, errors.New("Unknown block")
@@ -116,4 +84,23 @@ func main() {
 	pb.RegisterPollingStationServer(grpcServer, newServer())
 
 	grpcServer.Serve(lis)
+}
+
+func cast(orig vchain.Block) *pb.Block {
+	votes := make([]*pb.Vote, len(orig.Votes))
+	for _, vote := range orig.Votes {
+		votes = append(votes, &pb.Vote{
+			VoterProof: vote.VoterProof,
+			RaceId:     int32(vote.RaceID),
+			Selection:  vote.Selection,
+		})
+	}
+
+	return &pb.Block{
+		Number:   int32(orig.Number),
+		Parent:   orig.Parent,
+		Nonce:    int32(orig.Nonce),
+		Capacity: int32(orig.Capacity),
+		Votes:    votes,
+	}
 }
