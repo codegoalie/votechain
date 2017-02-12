@@ -16,26 +16,32 @@ import (
 )
 
 type pollingPlaceServer struct {
-	chain vchain.Chain
+	chain    vchain.Chain
+	newVotes chan *pb.Vote
 }
 
-func (s *pollingPlaceServer) Cast(ctx context.Context, vote *pb.Vote) (*pb.Result, error) {
-	log.Printf("Received cast: \n%+v", vote)
-	err := s.chain.AddVote(vchain.Vote{
-		VoterProof: vote.VoterProof,
-		RaceID:     int(vote.RaceId),
-		Selection:  vote.Selection,
-	})
+func (s *pollingPlaceServer) Cast(ctx context.Context, msg *pb.Vote) (*pb.Result, error) {
+	log.Printf("Received cast: \n%+v", msg)
+	vote := vchain.Vote{
+		VoterProof: msg.VoterProof,
+		RaceID:     int(msg.RaceId),
+		Selection:  msg.Selection,
+	}
+
+	err := s.chain.AddVote(vote)
 
 	if err != nil {
-		log.Printf("Could not cast vote: \n%+v", s.chain)
+		errorMessage := fmt.Sprintf("Could not cast vote: %s", err.Error())
+		log.Println(errorMessage)
 		return &pb.Result{
 			Success: false,
-			Message: "Could not cast vote",
+			Message: errorMessage,
 		}, err
 	}
 
-	log.Printf("Vote Cast! \n%+v", s.chain)
+	log.Printf("Vote Cast! \n%+v\nSending to peer(s)...\n", s.chain)
+	s.newVotes <- msg
+
 	return &pb.Result{
 		Success: true,
 		Message: "Vote cast! Thanks for being a part!",
@@ -56,6 +62,7 @@ func (s pollingPlaceServer) GetBlock(ctx context.Context, in *pb.BlockNumber) (*
 
 func (s pollingPlaceServer) Coordinate(client pb.PollingStation_CoordinateServer) error {
 	for {
+		fmt.Println("Receiving")
 		in, err := client.Recv()
 		if err == io.EOF {
 			return nil
@@ -77,17 +84,26 @@ func (s pollingPlaceServer) Coordinate(client pb.PollingStation_CoordinateServer
 		case *pb.Coordination_Vote:
 			vote := msg.Vote
 			log.Printf("Coordinated vote received: %+v\n", vote)
+			s.chain.AddVote(vchain.Vote{
+				VoterProof: vote.VoterProof,
+				RaceID:     int(vote.RaceId),
+				Selection:  vote.Selection,
+			})
+			log.Printf("Coordinated vote Added! \n%+v\n", s.chain)
 		}
-		// key := serialize(in.Location)
-		//                 ... // look for notes to be sent to client
-		// 								for _, note := range s.routeNotes[key] {
-		// 									if err := stream.Send(note); err != nil {
-		// 														return err
 
-		// 									}
-
-		// 								}
-
+		log.Println("At newVotes select")
+		select {
+		case vote := <-s.newVotes:
+			log.Printf("Sending newVote: %+v\n", vote)
+			client.Send(&pb.Coordination{
+				Transaction: &pb.Coordination_Vote{
+					Vote: vote,
+				},
+			})
+		default:
+			log.Println("Skip newVotes")
+		}
 	}
 }
 
