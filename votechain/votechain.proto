@@ -6,7 +6,7 @@ service PollingStation {
   rpc Cast(Vote) returns (Result) {}
   rpc GetLatestBlock(Empty) returns (Block) {}
   rpc GetBlock(BlockNumber) returns (Block) {}
-  rpc Coordinate(stream Coordination) returns (stream Coordination) {}
+  rpc Mined(Block) returns (Empty) {}
 }
 
 service ChainNode {
@@ -36,11 +36,4 @@ message Block {
 
 message BlockNumber {
   string hash = 1;
-}
-
-message Coordination {
-  oneof transaction {
-    Block block = 1;
-    Vote vote = 2;
-  }
 }
