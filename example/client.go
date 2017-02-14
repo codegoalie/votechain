@@ -3,11 +3,15 @@ package main
 import (
 	"context"
 	"log"
+	"math/rand"
+	"time"
 
 	"google.golang.org/grpc"
 
 	pb "github.com/codegoalie/votechain/votechain"
 )
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func main() {
 	conn, err := grpc.Dial("localhost:4000", grpc.WithInsecure())
@@ -21,25 +25,27 @@ func main() {
 		log.Fatalf("Failed to get stream: %v", err)
 	}
 
-	votes := []pb.Vote{
-		{
-			VoterProof: "123",
-			RaceId:     2,
-			Selection:  "1,2",
-		},
-		{
-			VoterProof: "321",
-			RaceId:     2,
-			Selection:  "2,1",
-		},
-	}
+	ticker := time.NewTicker(time.Second * 3)
 
-	for _, vote := range votes {
+	for _ = range ticker.C {
+		vote := pb.Vote{
+			VoterProof: randString(5),
+			RaceId:     int32(rand.Int()),
+			Selection:  randString(10),
+		}
 		log.Printf("Sending vote: %v\n", vote)
-		_, err := client.Cast(context.Background(), &vote)
+		_, err = client.Cast(context.Background(), &vote)
 
 		if err != nil {
 			log.Fatalf("Failed to send a vote: %v", err)
 		}
 	}
+}
+
+func randString(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }
