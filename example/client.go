@@ -20,11 +20,6 @@ func main() {
 	}
 	defer conn.Close()
 	client := pb.NewPollingStationClient(conn)
-
-	if err != nil {
-		log.Fatalf("Failed to get stream: %v", err)
-	}
-
 	ticker := time.NewTicker(time.Second * 3)
 
 	for _ = range ticker.C {

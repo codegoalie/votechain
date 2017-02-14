@@ -15,8 +15,8 @@ import (
 )
 
 type pollingPlaceServer struct {
-	chain    vchain.Chain
-	newVotes chan *pb.Vote
+	chain       vchain.Chain
+	broadcaster chan<- *pb.Vote
 }
 
 func (s *pollingPlaceServer) Cast(ctx context.Context, msg *pb.Vote) (*pb.Result, error) {
@@ -39,7 +39,7 @@ func (s *pollingPlaceServer) Cast(ctx context.Context, msg *pb.Vote) (*pb.Result
 	}
 
 	log.Printf("Vote Cast! \n%+v\nSending to peer(s)...\n", s.chain)
-	s.newVotes <- msg
+	s.broadcaster <- msg
 
 	return &pb.Result{
 		Success: true,
@@ -64,15 +64,18 @@ func (s pollingPlaceServer) Mined(ctx context.Context, msg *pb.Block) (*pb.Empty
 	return nil, nil
 }
 
-func newServer() *pollingPlaceServer {
+func newServer(capacity int, broadcaster chan<- *pb.Vote) *pollingPlaceServer {
 	s := new(pollingPlaceServer)
-	s.chain = vchain.NewChain(3)
+	s.chain = vchain.NewChain(capacity)
+	s.broadcaster = broadcaster
 
 	return s
 }
 
 func main() {
 	port := flag.String("port", "4000", "Port to listen on")
+	peerPort := flag.String("peerport", "5000", "Port to coordinate with")
+	capacity := flag.Int("capacity", 3, "Number of votes per block")
 	flag.Parse()
 
 	fmt.Printf("Listening on :%s\n", *port)
@@ -81,11 +84,45 @@ func main() {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
+	peers := []string{
+		fmt.Sprintf("localhost:%s", *peerPort),
+	}
+
+	newVotes := make(chan *pb.Vote, 5)
+
+	go broadcaster(newVotes, peers)
+
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
-	pb.RegisterPollingStationServer(grpcServer, newServer())
+	pb.RegisterPollingStationServer(grpcServer, newServer(*capacity, newVotes))
 
 	grpcServer.Serve(lis)
+}
+
+func broadcaster(newVotes <-chan *pb.Vote, peers []string) {
+	fmt.Println("Starting broadcaster")
+	clients := []pb.PollingStationClient{}
+	for _, addr := range peers {
+		conn, err := grpc.Dial(addr, grpc.WithInsecure())
+		if err != nil {
+			log.Printf("Failed to dial: %s", err)
+			continue
+		}
+
+		client := pb.NewPollingStationClient(conn)
+		clients = append(clients, client)
+	}
+
+	ctx := context.Background()
+	fmt.Printf("broadcaster ready with clients: %+v\n", clients)
+
+	select {
+	case vote := <-newVotes:
+		for _, client := range clients {
+			client.Cast(ctx, vote)
+			fmt.Printf("broadcaster: Sent to %v\n", client)
+		}
+	}
 }
 
 func cast(orig vchain.Block) *pb.Block {
